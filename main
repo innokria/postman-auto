@@ -1,0 +1,50 @@
+Step 1: Set Up Postman Collection
+
+    Create a New Request in Postman:
+        Method: GET
+        URL: {{cosmos_endpoint}}/dbs/{{database_id}}/colls/{{container_id}}/docs/{{document_id}}
+
+---------------------------
+
+const crypto = require('crypto');
+
+// Load variables from environment or external configuration
+const endpoint = pm.environment.get("cosmos_endpoint");
+const key = pm.environment.get("cosmos_key");
+const databaseId = pm.environment.get("database_id");
+const containerId = pm.environment.get("container_id");
+const documentId = pm.environment.get("document_id");
+const partitionKey = pm.environment.get("partition_key");
+
+const resourceLink = `dbs/${databaseId}/colls/${containerId}/docs/${documentId}`;
+const utcDate = new Date().toUTCString();
+const masterKey = new Buffer.from(key, "base64");
+
+const stringToSign = `GET\n` +
+                     `docs\n` +
+                     `${resourceLink}\n` +
+                     `${utcDate.toLowerCase()}\n` +
+                     ``;
+
+const body = new Buffer.from(stringToSign, "utf8");
+const signature = crypto.createHmac("sha256", masterKey).update(body).digest("base64");
+
+// Set headers
+pm.request.headers.add({ key: "x-ms-date", value: utcDate });
+pm.request.headers.add({ key: "x-ms-version", value: "2018-12-31" });
+pm.request.headers.add({ key: "x-ms-documentdb-partitionkey", value: `["${partitionKey}"]` });
+pm.request.headers.add({ key: "Authorization", value: encodeURIComponent(`type=master&ver=1.0&sig=${signature}`) });
+---------
+{
+  "id": "abcd1234",
+  "name": "CosmosDB Env",
+  "values": [
+    { "key": "cosmos_endpoint", "value": "https://your-cosmosdb-account.documents.azure.com:443/", "enabled": true },
+    { "key": "cosmos_key", "value": "your-cosmosdb-account-key", "enabled": true },
+    { "key": "database_id", "value": "your-database-id", "enabled": true },
+    { "key": "container_id", "value": "your-container-id", "enabled": true },
+    { "key": "document_id", "value": "your-document-id", "enabled": true },
+    { "key": "partition_key", "value": "your-partition-key", "enabled": true }
+  ]
+}
+
