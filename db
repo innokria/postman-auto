@@ -1,0 +1,61 @@
+import { CosmosClient } from "@azure/cosmos";
+import * as fs from 'fs';
+import * as path from 'path';
+
+// Cosmos DB configuration (replace with your actual credentials)
+const cosmosConfig = {
+  endpoint: "https://your-cosmosdb-account.documents.azure.com:443/",
+  key: "your-cosmosdb-account-key",
+  databaseId: "your-database-id",
+  containerId: "your-container-id",
+  partitionKey: "your-partition-key"
+};
+
+// Create a new CosmosClient instance
+const client = new CosmosClient({ endpoint: cosmosConfig.endpoint, key: cosmosConfig.key });
+
+// Function to get the database and container
+async function setupCosmosEnvironment() {
+  // Get the database instance
+  const { database } = await client.databases.createIfNotExists({ id: cosmosConfig.databaseId });
+  console.log(`Database "${cosmosConfig.databaseId}" is ready.`);
+
+  // Get the container instance
+  const { container } = await database.containers.createIfNotExists({
+    id: cosmosConfig.containerId,
+    partitionKey: {
+      paths: [`/${cosmosConfig.partitionKey}`]
+    }
+  });
+  console.log(`Container "${cosmosConfig.containerId}" is ready.`);
+
+  // Assuming you're also getting a specific document ID, fetch the document (optional)
+  const documentId = cosmosConfig.documentId || "your-document-id";
+  const { resource: document } = await container.item(documentId, cosmosConfig.partitionKey).read();
+
+  console.log(`Fetched document: ${JSON.stringify(document, null, 2)}`);
+
+  // Prepare environment variables for Newman
+  const envFilePath = path.join(__dirname, 'newman_environment.json');
+  const envData = {
+    id: "abcd1234",
+    name: "CosmosDB Env",
+    values: [
+      { key: "cosmos_endpoint", value: cosmosConfig.endpoint, enabled: true },
+      { key: "cosmos_key", value: cosmosConfig.key, enabled: true },
+      { key: "database_id", value: cosmosConfig.databaseId, enabled: true },
+      { key: "container_id", value: cosmosConfig.containerId, enabled: true },
+      { key: "document_id", value: documentId, enabled: true },
+      { key: "partition_key", value: cosmosConfig.partitionKey, enabled: true }
+    ]
+  };
+
+  // Write the environment variables to a JSON file
+  fs.writeFileSync(envFilePath, JSON.stringify(envData, null, 2), 'utf8');
+  console.log(`Environment file has been written to ${envFilePath}`);
+}
+
+// Run the setup function
+setupCosmosEnvironment().catch(err => {
+  console.error('Error setting up Cosmos DB environment:', err);
+});
