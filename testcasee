@@ -1,0 +1,11 @@
+"// Access the environment variable",
+          "const expectedSiteId = pm.environment.get('siteId');",
+          "",
+          "// Extract the siteId from the response",
+          "const responseJson = pm.response.json();",
+          "const siteIdFromResponse = responseJson.siteId;",
+          "",
+          "// Perform the assertion",
+          "pm.test(\"siteId matches the expected value\", function() {",
+          "    pm.expect(siteIdFromResponse).to.eql(expectedSiteId);",
+          "});"
