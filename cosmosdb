@@ -1,0 +1,30 @@
+const { CosmosClient } = require('@azure/cosmos');
+
+// Replace with your actual Azure Cosmos DB connection details
+const endpoint = "YOUR_COSMOS_DB_ENDPOINT";
+const key = "YOUR_COSMOS_DB_PRIMARY_KEY";
+const databaseId = "YOUR_DATABASE_ID";
+const containerId = "YOUR_CONTAINER_ID";
+const documentId = "YOUR_DOCUMENT_ID";
+const partitionKey = "YOUR_PARTITION_KEY_VALUE"; // Set this to the partition key value for your document
+
+async function readDocument() {
+    const client = new CosmosClient({ endpoint, key });
+
+    try {
+        // Select the database
+        const database = client.database(databaseId);
+        
+        // Select the container
+        const container = database.container(containerId);
+
+        // Read the document
+        const { resource: document } = await container.item(documentId, partitionKey).read();
+
+        console.log("Document found:", document);
+    } catch (error) {
+        console.error("Error reading document:", error);
+    }
+}
+
+readDocument();
