@@ -1,0 +1,35 @@
+async function readDocument() {
+    const client = new CosmosClient({ endpoint, key });
+
+    try {
+        // Select the database
+        const database = client.database(databaseId);
+        
+        // Select the container
+        const container = database.container(containerId);
+
+        // Read the document
+        // If your Cosmos DB is configured to allow queries without specifying a partition key
+        // You can use a query or direct read without specifying the partition key
+        const querySpec = {
+            query: "SELECT * FROM c WHERE c.id = @documentId",
+            parameters: [
+                {
+                    name: "@documentId",
+                    value: documentId
+                }
+            ]
+        };
+
+        const { resources: results } = await container.items.query(querySpec).fetchAll();
+
+        if (results.length > 0) {
+            console.log("Document found:", results[0]);
+        } else {
+            console.log("No document found with the specified ID.");
+        }
+
+    } catch (error) {
+        console.error("Error reading document:", error);
+    }
+}
