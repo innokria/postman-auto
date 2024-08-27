@@ -1,0 +1,39 @@
+// Load the CryptoJS library
+if (typeof CryptoJS === 'undefined') {
+    pm.sendRequest("https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/crypto-js.js", function (err, res) {
+        eval(res.text());
+    });
+}
+
+// Define variables needed for generating the auth token
+const masterKey = "<YOUR_COSMOS_DB_PRIMARY_KEY>"; // Replace with your Cosmos DB primary key
+const verb = "GET";
+const resourceType = "docs";
+const resourceLink = "dbs/<YOUR_DATABASE_ID>/colls/<YOUR_CONTAINER_ID>/docs/<YOUR_DOCUMENT_ID>"; // Replace with your resource link
+const date = new Date().toUTCString();
+
+pm.variables.set("date", date);
+
+// Function to generate the authorization token
+function generateAuthToken(masterKey, verb, resourceType, resourceLink, date) {
+    const key = CryptoJS.enc.Base64.parse(masterKey);
+
+    const textToHash = (verb || "").toLowerCase() + "\n" + 
+                       (resourceType || "").toLowerCase() + "\n" + 
+                       resourceLink + "\n" + 
+                       date.toLowerCase() + "\n" + 
+                       "" + "\n";
+
+    const signature = CryptoJS.HmacSHA256(textToHash, key);
+    const base64Bits = CryptoJS.enc.Base64.stringify(signature);
+
+    const masterToken = "master";
+    const tokenVersion = "1.0";
+    return encodeURIComponent("type=" + masterToken + "&ver=" + tokenVersion + "&sig=" + base64Bits);
+}
+
+// Wait until the library is loaded and then generate the auth token
+setTimeout(() => {
+    const authToken = generateAuthToken(masterKey, verb, resourceType, resourceLink, date);
+    pm.variables.set("authToken", authToken);
+}, 1000);
