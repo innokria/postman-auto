@@ -1,0 +1,43 @@
+const fs = require('fs');
+const path = require('path');
+
+// Path to your Postman environment JSON file
+const envFilePath = path.join(__dirname, 'postman_environment.json');
+
+// New dictionary entry to add
+const newEntry = {
+    key: 'articleId',
+    value: '33',
+    enabled: true
+};
+
+// Function to update the Postman environment file
+function updatePostmanEnvFile() {
+    try {
+        // Read the existing environment file
+        const envData = fs.readFileSync(envFilePath, 'utf8');
+        const envJson = JSON.parse(envData);
+
+        // Update or add the new dictionary entry
+        let found = false;
+        for (let i = 0; i < envJson.values.length; i++) {
+            if (envJson.values[i].key === newEntry.key) {
+                envJson.values[i] = newEntry;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            envJson.values.push(newEntry);
+        }
+
+        // Write the updated content back to the file
+        fs.writeFileSync(envFilePath, JSON.stringify(envJson, null, 2));
+        console.log('Postman environment file updated successfully.');
+    } catch (error) {
+        console.error('Error updating Postman environment file:', error.message);
+    }
+}
+
+// Run the update function
+updatePostmanEnvFile();
