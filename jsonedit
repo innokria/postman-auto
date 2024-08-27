@@ -1,6 +1,15 @@
 const fs = require('fs');
 const path = require('path');
 
+
+// Construct the path to the Postman environment JSON file
+const scriptDir = __dirname; // Directory of the script
+const parentDir = path.dirname(scriptDir); // Parent directory of the script
+const postmanDir = path.join(parentDir, 'postman'); // Directory where the JSON file is located
+const envFileName = 'postman_environment.json'; // JSON file name
+const envFilePath = path.join(postmanDir, envFileName); // Full path to the JSON file
+
+
 // Path to your Postman environment JSON file
 const envFilePath = path.join(__dirname, 'postman_environment.json');
 
