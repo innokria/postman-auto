@@ -1,0 +1,40 @@
+// New key-value pairs to add/update
+const newEntries = [
+    { key: 'articleId', value: '33', enabled: true },
+    { key: 'siteId', value: '0369', enabled: true },
+    { key: 'userId', value: '1234', enabled: true }
+    // Add more key-value pairs as needed
+];
+
+// Function to update the Postman environment file
+function updatePostmanEnvFile() {
+    try {
+        // Read the existing environment file
+        const envData = fs.readFileSync(envFilePath, 'utf8');
+        const envJson = JSON.parse(envData);
+
+        // Loop through each new entry and update or add to the environment JSON
+        newEntries.forEach(newEntry => {
+            let found = false;
+            for (let i = 0; i < envJson.values.length; i++) {
+                if (envJson.values[i].key === newEntry.key) {
+                    envJson.values[i] = newEntry; // Update existing key
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                envJson.values.push(newEntry); // Add new key if not found
+            }
+        });
+
+        // Write the updated content back to the file
+        fs.writeFileSync(envFilePath, JSON.stringify(envJson, null, 2));
+        console.log('Postman environment file updated successfully.');
+    } catch (error) {
+        console.error('Error updating Postman environment file:', error.message);
+    }
+}
+
+// Run the update function
+updatePostmanEnvFile();
