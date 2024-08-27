@@ -1,0 +1,25 @@
+const CryptoJS = require('crypto-js');
+
+const masterKey = "<YOUR_COSMOS_DB_PRIMARY_KEY>"; // Replace with your Cosmos DB primary key
+const verb = "GET";
+const resourceType = "docs";
+const resourceLink = "dbs/<YOUR_DATABASE_ID>/colls/<YOUR_CONTAINER_ID>/docs/<YOUR_DOCUMENT_ID>"; // Replace with your resource link
+const date = new Date().toUTCString();
+
+pm.variables.set("date", date);
+
+const textToHash = (verb || "").toLowerCase() + "\n" + 
+                   (resourceType || "").toLowerCase() + "\n" + 
+                   resourceLink + "\n" + 
+                   date.toLowerCase() + "\n" + 
+                   "" + "\n";
+
+const key = CryptoJS.enc.Base64.parse(masterKey);
+const signature = CryptoJS.HmacSHA256(textToHash, key);
+const base64Bits = CryptoJS.enc.Base64.stringify(signature);
+
+const masterToken = "master";
+const tokenVersion = "1.0";
+const authToken = encodeURIComponent("type=" + masterToken + "&ver=" + tokenVersion + "&sig=" + base64Bits);
+
+pm.variables.set("authToken", authToken);
