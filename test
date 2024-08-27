@@ -1,0 +1,11 @@
+// Extract the siteId from the response
+const responseJson = pm.response.json();
+const siteIdFromResponse = responseJson.siteId; // Adjust if necessary based on your response structure
+
+// Expected siteId
+const expectedSiteId = "0369";
+
+// Perform the assertion
+pm.test("siteId is 0369", function() {
+    pm.expect(siteIdFromResponse).to.eql(expectedSiteId);
+});
