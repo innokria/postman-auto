@@ -1,40 +1,63 @@
 const { EventHubConsumerClient } = require('@azure/event-hubs');
+const { DateTime } = require('luxon'); // To handle timestamps easily
 
 const connectionString = '<YOUR_EVENT_HUB_CONNECTION_STRING>';
 const consumerGroup = '<YOUR_CONSUMER_GROUP>';
 const eventHubName = '<YOUR_EVENT_HUB_NAME>';
+const hoursToRead = 24; // Duration in hours
 
 async function main() {
     const client = new EventHubConsumerClient(consumerGroup, connectionString, {
         eventHubName
     });
 
-    try {
-        // Get Partition IDs
-        const partitionIds = await client.getPartitionIds();
-        console.log(`Partition IDs: ${partitionIds}`);
+    // Calculate the starting position
+    const startDate = DateTime.now().minus({ hours: hoursToRead });
+    const startTimestamp = startDate.toMillis(); // Get the timestamp in milliseconds
 
-        // Example: Receive messages from the first partition
-        const partitionId = partitionIds[0];
-        const events = await client.receiveBatch(partitionId, 10, {
-            startingPosition: "@latest",
-            maxWaitTimeInSeconds: 5
-        });
-        console.log(`Received events: ${JSON.stringify(events)}`);
+    // This will hold all the messages
+    const messages = [];
 
-        // Get Partition Properties
-        const partitionProperties = await client.getPartitionProperties(partitionId);
-        console.log(`Partition properties: ${JSON.stringify(partitionProperties)}`);
+    // Define the processEvents handler
+    const processEvents = async (events, context) => {
+        for (const event of events) {
+            const eventTimestamp = new Date(event.enqueuedTimeUtc).getTime();
+            
+            // Check if the message timestamp is within the last 24 hours
+            if (eventTimestamp >= startTimestamp) {
+                messages.push({
+                    body: event.body,
+                    timestamp: event.enqueuedTimeUtc
+                });
+            }
+        }
+    };
 
-        // Get Event Hub Properties
-        const eventHubProperties = await client.getEventHubProperties();
-        console.log(`Event Hub properties: ${JSON.stringify(eventHubProperties)}`);
+    // Define the processError handler
+    const processError = async (err, context) => {
+        console.error(`Error occurred: ${err.message}`);
+    };
 
-    } catch (error) {
-        console.error(`Error: ${error.message}`);
-    } finally {
-        await client.close();
-    }
+    // Subscribe to events from all partitions
+    const subscription = client.subscribe({
+        processEvents,
+        processError
+    }, {
+        startingPosition: "@earliest" // Start reading from the earliest position
+    });
+
+    // Keep the connection active for a specified duration
+    console.log(`Reading messages from the last ${hoursToRead} hours...`);
+    await new Promise(resolve => setTimeout(resolve, 1000 * 60 * 10)); // Run for 10 minutes
+
+    // Close the client
+    await client.close();
+
+    // Output collected messages
+    console.log(`Collected ${messages.length} messages from the last ${hoursToRead} hours.`);
+    messages.forEach(msg => {
+        console.log(`Timestamp: ${msg.timestamp}, Message: ${JSON.stringify(msg.body)}`);
+    });
 }
 
 main().catch(err => console.error('Main function error:', err));
