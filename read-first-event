@@ -1,0 +1,33 @@
+const { EventHubConsumerClient } = require('@azure/event-hubs');
+
+const connectionString = '<YOUR_EVENT_HUB_CONNECTION_STRING>';
+const consumerGroup = '<YOUR_CONSUMER_GROUP>';
+const eventHubName = '<YOUR_EVENT_HUB_NAME>';
+
+async function readFromBeginning() {
+    const client = new EventHubConsumerClient(consumerGroup, connectionString, {
+        eventHubName
+    });
+
+    // Subscribe to the events from the beginning
+    const subscription = client.subscribe({
+        processEvents: async (events, context) => {
+            for (const event of events) {
+                console.log(`Received event: ${JSON.stringify(event.body)}`);
+            }
+        },
+        processError: async (err, context) => {
+            console.error(`Error occurred: ${err}`);
+        }
+    }, {
+        startingPosition: "-1" // Start reading from the beginning
+    });
+
+    // Keep the application running to receive events
+    await new Promise(resolve => setTimeout(resolve, 60000)); // Run for 60 seconds
+
+    // Close the client gracefully
+    await client.close();
+}
+
+readFromBeginning().catch(err => console.error('Error:', err));
