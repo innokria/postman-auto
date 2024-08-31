@@ -1,0 +1,25 @@
+const { EventHubConsumerClient } = require('@azure/event-hubs');
+
+const connectionString = '<YOUR_EVENT_HUB_CONNECTION_STRING>';
+const consumerGroup = '<YOUR_CONSUMER_GROUP>';
+const eventHubName = '<YOUR_EVENT_HUB_NAME>';
+
+async function main() {
+    try {
+        const client = new EventHubConsumerClient(consumerGroup, connectionString, {
+            eventHubName
+        });
+
+        console.log('Connected to Event Hub.');
+
+        // Close the client after a short delay
+        setTimeout(async () => {
+            await client.close();
+            console.log('Client closed.');
+        }, 5000);
+    } catch (err) {
+        console.error('Connection error:', err);
+    }
+}
+
+main().catch(err => console.error('Main function error:', err));
