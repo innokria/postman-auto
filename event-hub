@@ -1,0 +1,45 @@
+const { EventHubConsumerClient } = require("@azure/event-hubs");
+
+const connectionString = "Your Event Hub Connection String"; // Replace with your Event Hub connection string
+const eventHubName = "Your Event Hub Name"; // Replace with your Event Hub name
+const consumerGroup = EventHubConsumerClient.defaultConsumerGroupName; // The default consumer group
+
+async function main() {
+    // Create a consumer client for the event hub
+    const consumerClient = new EventHubConsumerClient(consumerGroup, connectionString, eventHubName);
+
+    // Subscribe to the event hub and listen for messages
+    const subscription = consumerClient.subscribe(
+        {
+            processEvents: async (events, context) => {
+                if (events.length === 0) {
+                    console.log(`No events received within wait time. Waiting for next interval`);
+                    return;
+                }
+
+                for (const event of events) {
+                    console.log(`Received event: ${event.body}`);
+                    // Process the event data here
+                }
+            },
+            processError: async (err, context) => {
+                console.error(`Error occurred: ${err.message}`);
+                // Handle the error
+            }
+        },
+        { startPosition: { earliest: true } } // Start reading from the earliest available event
+    );
+
+    // Wait for a certain time to process incoming events, then exit
+    await new Promise((resolve) => setTimeout(resolve, 60000)); // 1 minute
+
+    // Close the subscription
+    await subscription.close();
+    await consumerClient.close();
+
+    console.log("Finished receiving events");
+}
+
+main().catch((err) => {
+    console.error("Error running sample:", err);
+});
