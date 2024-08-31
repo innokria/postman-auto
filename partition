@@ -1,0 +1,40 @@
+const { EventHubConsumerClient } = require('@azure/event-hubs');
+
+const connectionString = '<YOUR_EVENT_HUB_CONNECTION_STRING>';
+const consumerGroup = '<YOUR_CONSUMER_GROUP>';
+const eventHubName = '<YOUR_EVENT_HUB_NAME>';
+
+async function main() {
+    const client = new EventHubConsumerClient(consumerGroup, connectionString, {
+        eventHubName
+    });
+
+    try {
+        // Get Partition IDs
+        const partitionIds = await client.getPartitionIds();
+        console.log(`Partition IDs: ${partitionIds}`);
+
+        // Example: Receive messages from the first partition
+        const partitionId = partitionIds[0];
+        const events = await client.receiveBatch(partitionId, 10, {
+            startingPosition: "@latest",
+            maxWaitTimeInSeconds: 5
+        });
+        console.log(`Received events: ${JSON.stringify(events)}`);
+
+        // Get Partition Properties
+        const partitionProperties = await client.getPartitionProperties(partitionId);
+        console.log(`Partition properties: ${JSON.stringify(partitionProperties)}`);
+
+        // Get Event Hub Properties
+        const eventHubProperties = await client.getEventHubProperties();
+        console.log(`Event Hub properties: ${JSON.stringify(eventHubProperties)}`);
+
+    } catch (error) {
+        console.error(`Error: ${error.message}`);
+    } finally {
+        await client.close();
+    }
+}
+
+main().catch(err => console.error('Main function error:', err));
