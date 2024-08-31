@@ -1,0 +1,55 @@
+const { EventHubConsumerClient } = require("@azure/event-hubs");
+
+// Replace with your actual Event Hub connection string and event hub name
+const connectionString = "Endpoint=sb://<your-event-hub-namespace>.servicebus.windows.net/;SharedAccessKeyName=<your-key-name>;SharedAccessKey=<your-key>;EntityPath=<your-event-hub-name>";
+const eventHubName = "<your-event-hub-name>";
+const consumerGroup = EventHubConsumerClient.defaultConsumerGroupName; // Use default consumer group
+
+async function main() {
+    const consumerClient = new EventHubConsumerClient(consumerGroup, connectionString, eventHubName);
+
+    // Log partition IDs to ensure connection
+    const partitionIds = await consumerClient.getPartitionIds();
+    console.log("Partitions in the Event Hub:", partitionIds);
+
+    // Calculate the time for 5 minutes ago
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
+    // Iterate over each partition and subscribe
+    for (const partitionId of partitionIds) {
+        const subscription = consumerClient.subscribe(
+            {
+                processEvents: async (events, context) => {
+                    if (events.length === 0) {
+                        console.log(`No events received from partition ${partitionId}.`);
+                        return;
+                    }
+
+                    for (const event of events) {
+                        console.log(`Received event from partition ${partitionId}: ${JSON.stringify(event.body)}`);
+                    }
+                },
+                processError: async (err, context) => {
+                    console.error(`Error processing events from partition ${partitionId}: ${err.message}`);
+                }
+            },
+            {
+                startPosition: { enqueuedOn: fiveMinutesAgo } // Start reading from 5 minutes ago
+            }
+        );
+
+        // Wait for a certain time to process incoming events
+        await new Promise((resolve) => setTimeout(resolve, 60000)); // Wait 1 minute
+
+        // Close the subscription
+        await subscription.close();
+    }
+
+    // Close the client
+    await consumerClient.close();
+    console.log("Finished receiving events from all partitions");
+}
+
+main().catch((err) => {
+    console.error("Error occurred while running the sample:", err);
+});
