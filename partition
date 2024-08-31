@@ -1,5 +1,4 @@
 const { EventHubConsumerClient } = require('@azure/event-hubs');
-const { DateTime } = require('luxon'); // To handle timestamps easily
 
 const connectionString = '<YOUR_EVENT_HUB_CONNECTION_STRING>';
 const consumerGroup = '<YOUR_CONSUMER_GROUP>';
@@ -11,9 +10,9 @@ async function main() {
         eventHubName
     });
 
-    // Calculate the starting position
-    const startDate = DateTime.now().minus({ hours: hoursToRead });
-    const startTimestamp = startDate.toMillis(); // Get the timestamp in milliseconds
+    // Calculate the starting timestamp for 24 hours ago
+    const now = new Date();
+    const startTimestamp = now.getTime() - (hoursToRead * 60 * 60 * 1000); // 24 hours ago in milliseconds
 
     // This will hold all the messages
     const messages = [];
