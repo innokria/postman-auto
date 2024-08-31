@@ -1,0 +1,45 @@
+const { EventHubConsumerClient } = require("@azure/event-hubs");
+
+// Replace with your actual Event Hub connection string
+const connectionString = "Endpoint=sb://<your-event-hub-namespace>.servicebus.windows.net/;SharedAccessKeyName=<your-key-name>;SharedAccessKey=<your-key>;EntityPath=<your-event-hub-name>";
+
+// Replace with your Event Hub name and consumer group
+const eventHubName = "<your-event-hub-name>";
+const consumerGroup = EventHubConsumerClient.defaultConsumerGroupName; // Or specify your custom consumer group
+
+async function main() {
+    // Create a consumer client for the event hub
+    const consumerClient = new EventHubConsumerClient(consumerGroup, connectionString, eventHubName);
+
+    // Subscribe to events from all partitions
+    const subscription = consumerClient.subscribe(
+        {
+            processEvents: async (events, context) => {
+                if (events.length === 0) {
+                    console.log("No events received within the last interval. Waiting for more events.");
+                    return;
+                }
+
+                for (const event of events) {
+                    console.log(`Received event: ${JSON.stringify(event.body)}`);
+                }
+            },
+            processError: async (err, context) => {
+                console.error(`Error processing events: ${err.message}`);
+            }
+        },
+        { startPosition: { earliest: true } } // Start reading from the earliest event
+    );
+
+    // Wait for a certain time to process incoming events
+    await new Promise((resolve) => setTimeout(resolve, 60000)); // 1 minute
+
+    // Close the subscription and the client
+    await subscription.close();
+    await consumerClient.close();
+    console.log("Finished receiving events");
+}
+
+main().catch((err) => {
+    console.error("Error running sample:", err);
+});
