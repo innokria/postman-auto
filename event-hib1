@@ -1,4 +1,4 @@
-const { EventHubConsumerClient, EventPosition } = require("@azure/event-hubs");
+const { EventHubConsumerClient } = require("@azure/event-hubs");
 
 // Replace with your actual Event Hub connection string and event hub name
 const connectionString = "Endpoint=sb://<your-event-hub-namespace>.servicebus.windows.net/;SharedAccessKeyName=<your-key-name>;SharedAccessKey=<your-key>;EntityPath=<your-event-hub-name>";
@@ -9,12 +9,15 @@ async function main() {
     // Create a consumer client for the event hub
     const consumerClient = new EventHubConsumerClient(consumerGroup, connectionString, eventHubName);
 
-    // Subscribe to events from all partitions, using the EventPosition helper for earliest
+    // Calculate the time for 5 minutes ago
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
+    // Subscribe to events from all partitions, using `enqueuedOn` to start from 5 minutes ago
     const subscription = consumerClient.subscribe(
         {
             processEvents: async (events, context) => {
                 if (events.length === 0) {
-                    console.log("No events received within the last interval. Waiting for more events.");
+                    console.log("No events received in the last interval.");
                     return;
                 }
 
@@ -27,11 +30,11 @@ async function main() {
             }
         },
         {
-            startPosition: EventPosition.earliest() // Correctly specifying earliest event position
+            startPosition: { enqueuedOn: fiveMinutesAgo } // Start reading events from 5 minutes ago
         }
     );
 
-    // Wait for a certain time to process incoming events
+    // Wait to receive events for a certain amount of time
     await new Promise((resolve) => setTimeout(resolve, 60000)); // 1 minute
 
     // Close the subscription and the client
