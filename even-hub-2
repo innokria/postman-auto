@@ -1,15 +1,16 @@
-const { EventHubConsumerClient, AbortController } = require('@azure/event-hubs');
+const { EventHubConsumerClient } = require('@azure/event-hubs');
 
 const connectionString = '<YOUR_EVENT_HUB_CONNECTION_STRING>';
 const consumerGroup = '<YOUR_CONSUMER_GROUP>';
 const eventHubName = '<YOUR_EVENT_HUB_NAME>';
 const maxRetries = 5; // Number of retry attempts
 const retryDelay = 5000; // Delay between retries in milliseconds
+const readDuration = 60000; // Duration to read messages (in milliseconds)
 
 async function main() {
     let retries = 0;
     let connected = false;
-    
+
     while (retries < maxRetries && !connected) {
         try {
             console.log(`Attempting to connect (attempt ${retries + 1})...`);
@@ -27,12 +28,13 @@ async function main() {
                     }
                 },
                 processError: async (err, context) => {
-                    console.error(`Error occurred: ${err}`);
+                    console.error(`Error occurred: ${err.message}`);
                 }
             });
 
-            // Wait for a while to simulate a connection being active
-            await new Promise(resolve => setTimeout(resolve, 10000));
+            // Keep the connection active for a specified duration
+            console.log(`Reading messages for ${readDuration / 1000} seconds...`);
+            await new Promise(resolve => setTimeout(resolve, readDuration));
 
             // Close the client gracefully
             await client.close();
