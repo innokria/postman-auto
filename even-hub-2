@@ -1,55 +1,64 @@
-const { EventHubConsumerClient } = require("@azure/event-hubs");
+const { EventHubConsumerClient, AbortController } = require('@azure/event-hubs');
 
-// Replace with your actual Event Hub connection string and event hub name
-const connectionString = "Endpoint=sb://<your-event-hub-namespace>.servicebus.windows.net/;SharedAccessKeyName=<your-key-name>;SharedAccessKey=<your-key>;EntityPath=<your-event-hub-name>";
-const eventHubName = "<your-event-hub-name>";
-const consumerGroup = EventHubConsumerClient.defaultConsumerGroupName; // Use default consumer group
+const connectionString = '<YOUR_EVENT_HUB_CONNECTION_STRING>';
+const consumerGroup = '<YOUR_CONSUMER_GROUP>';
+const eventHubName = '<YOUR_EVENT_HUB_NAME>';
+const maxRetries = 5; // Number of retry attempts
+const retryDelay = 5000; // Delay between retries in milliseconds
 
 async function main() {
-    const consumerClient = new EventHubConsumerClient(consumerGroup, connectionString, eventHubName);
+    let retries = 0;
+    let connected = false;
+    
+    while (retries < maxRetries && !connected) {
+        try {
+            console.log(`Attempting to connect (attempt ${retries + 1})...`);
 
-    // Log partition IDs to ensure connection
-    const partitionIds = await consumerClient.getPartitionIds();
-    console.log("Partitions in the Event Hub:", partitionIds);
+            // Create a client to interact with Event Hub
+            const client = new EventHubConsumerClient(consumerGroup, connectionString, {
+                eventHubName
+            });
 
-    // Calculate the time for 5 minutes ago
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-
-    // Iterate over each partition and subscribe
-    for (const partitionId of partitionIds) {
-        const subscription = consumerClient.subscribe(
-            {
+            // Register a handler to process events
+            client.subscribe({
                 processEvents: async (events, context) => {
-                    if (events.length === 0) {
-                        console.log(`No events received from partition ${partitionId}.`);
-                        return;
-                    }
-
                     for (const event of events) {
-                        console.log(`Received event from partition ${partitionId}: ${JSON.stringify(event.body)}`);
+                        console.log(`Received event: ${JSON.stringify(event.body)}`);
                     }
                 },
                 processError: async (err, context) => {
-                    console.error(`Error processing events from partition ${partitionId}: ${err.message}`);
+                    console.error(`Error occurred: ${err}`);
                 }
-            },
-            {
-                startPosition: { enqueuedOn: fiveMinutesAgo } // Start reading from 5 minutes ago
+            });
+
+            // Wait for a while to simulate a connection being active
+            await new Promise(resolve => setTimeout(resolve, 10000));
+
+            // Close the client gracefully
+            await client.close();
+
+            connected = true;
+            console.log('Connected successfully.');
+
+        } catch (error) {
+            console.error(`Connection failed: ${error.message}`);
+
+            // Check if the error is an ECONNRESET and handle it
+            if (error.code === 'ECONNRESET') {
+                console.log('Connection reset. Retrying...');
+                retries++;
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+            } else {
+                // Handle other types of errors
+                console.error('An unexpected error occurred:', error);
+                break;
             }
-        );
-
-        // Wait for a certain time to process incoming events
-        await new Promise((resolve) => setTimeout(resolve, 60000)); // Wait 1 minute
-
-        // Close the subscription
-        await subscription.close();
+        }
     }
 
-    // Close the client
-    await consumerClient.close();
-    console.log("Finished receiving events from all partitions");
+    if (!connected) {
+        console.error('Failed to connect after multiple attempts.');
+    }
 }
 
-main().catch((err) => {
-    console.error("Error occurred while running the sample:", err);
-});
+main().catch(err => console.error('Main function error:', err));
