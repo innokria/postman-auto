@@ -3,31 +3,43 @@ const { EventHubConsumerClient } = require('@azure/event-hubs');
 const connectionString = '<YOUR_EVENT_HUB_CONNECTION_STRING>';
 const consumerGroup = '<YOUR_CONSUMER_GROUP>';
 const eventHubName = '<YOUR_EVENT_HUB_NAME>';
+const readDuration = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
-async function readFromBeginning() {
+async function main() {
     const client = new EventHubConsumerClient(consumerGroup, connectionString, {
         eventHubName
     });
 
-    // Subscribe to the events from the beginning
-    const subscription = client.subscribe({
-        processEvents: async (events, context) => {
-            for (const event of events) {
-                console.log(`Received event: ${JSON.stringify(event.body)}`);
-            }
-        },
-        processError: async (err, context) => {
-            console.error(`Error occurred: ${err}`);
+    const startTime = Date.now();
+
+    // Function to process events
+    const processEvents = async (events, context) => {
+        for (const event of events) {
+            console.log(`Received event: ${JSON.stringify(event.body)} at ${new Date().toISOString()}`);
         }
+    };
+
+    // Function to handle errors
+    const processError = async (err, context) => {
+        console.error(`Error occurred: ${err.message}`);
+    };
+
+    // Subscribe to events
+    const subscription = client.subscribe({
+        processEvents,
+        processError
     }, {
         startingPosition: "-1" // Start reading from the beginning
     });
 
-    // Keep the application running to receive events
-    await new Promise(resolve => setTimeout(resolve, 60000)); // Run for 60 seconds
+    console.log('Reading events for 24 hours...');
+
+    // Keep the application running for 24 hours
+    await new Promise(resolve => setTimeout(resolve, readDuration));
 
     // Close the client gracefully
     await client.close();
+    console.log('Stopped reading events and closed client.');
 }
 
-readFromBeginning().catch(err => console.error('Error:', err));
+main().catch(err => console.error('Error in main function:', err));
