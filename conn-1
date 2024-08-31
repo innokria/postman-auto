@@ -1,0 +1,36 @@
+const { EventHubConsumerClient } = require('@azure/event-hubs');
+
+const connectionString = '<YOUR_EVENT_HUB_CONNECTION_STRING>';
+const consumerGroup = '<YOUR_CONSUMER_GROUP>';  // e.g., '$Default'
+const eventHubName = '<YOUR_EVENT_HUB_NAME>';
+
+async function receiveMessages() {
+    const consumer = new EventHubConsumerClient(consumerGroup, connectionString, {
+        eventHubName
+    });
+
+    const processEvents = async (events, context) => {
+        for (const event of events) {
+            console.log(`Received message: ${JSON.stringify(event.body)} at ${new Date().toISOString()}`);
+        }
+    };
+
+    const processError = async (err, context) => {
+        console.error(`Error occurred: ${err.message}`);
+    };
+
+    const subscription = consumer.subscribe({
+        processEvents,
+        processError
+    }, {
+        startingPosition: "@latest" // Start reading from the latest position
+    });
+
+    // Run for a specified time or until stopped manually
+    setTimeout(async () => {
+        await consumer.close();
+        console.log('Stopped receiving messages.');
+    }, 60000); // Run for 60 seconds
+}
+
+receiveMessages().catch(err => console.error('Error in receiveMessages function:', err));
